@@ -30,11 +30,6 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
     icon: "book-open",
   },
   {
-    label: "What's the weather in Paris?",
-    prompt: "What's the weather in Paris?",
-    icon: "search",
-  },
-  {
     label: "Change the theme to dark mode",
     prompt: "Change the theme to dark mode",
     icon: "sparkle",

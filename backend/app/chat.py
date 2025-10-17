@@ -31,14 +31,6 @@ from pydantic import ConfigDict, Field
 from .constants import INSTRUCTIONS, MODEL
 from .facts import Fact, fact_store
 from .memory_store import MemoryStore
-from .sample_widget import render_weather_widget, weather_widget_copy_text
-from .weather import (
-    WeatherLookupError,
-    retrieve_weather,
-)
-from .weather import (
-    normalize_unit as normalize_temperature_unit,
-)
 
 # If you want to check what's going on under the hood, set this to DEBUG
 logging.basicConfig(level=logging.INFO)
@@ -129,64 +121,6 @@ async def switch_theme(
         return None
 
 
-@function_tool(
-    description_override="Look up the current weather and upcoming forecast for a location and render an interactive weather dashboard."
-)
-async def get_weather(
-    ctx: RunContextWrapper[FactAgentContext],
-    location: str,
-    unit: Literal["celsius", "fahrenheit"] | str | None = None,
-) -> dict[str, str | None]:
-    print("[WeatherTool] tool invoked", {"location": location, "unit": unit})
-    try:
-        normalized_unit = normalize_temperature_unit(unit)
-    except WeatherLookupError as exc:
-        print("[WeatherTool] invalid unit", {"error": str(exc)})
-        raise ValueError(str(exc)) from exc
-
-    try:
-        data = await retrieve_weather(location, normalized_unit)
-    except WeatherLookupError as exc:
-        print("[WeatherTool] lookup failed", {"error": str(exc)})
-        raise ValueError(str(exc)) from exc
-
-    print(
-        "[WeatherTool] lookup succeeded",
-        {
-            "location": data.location,
-            "temperature": data.temperature,
-            "unit": data.temperature_unit,
-        },
-    )
-    try:
-        widget = render_weather_widget(data)
-        copy_text = weather_widget_copy_text(data)
-        payload: Any
-        try:
-            payload = widget.model_dump()
-        except AttributeError:
-            payload = widget
-        print("[WeatherTool] widget payload", payload)
-    except Exception as exc:  # noqa: BLE001
-        print("[WeatherTool] widget build failed", {"error": str(exc)})
-        raise ValueError("Weather data is currently unavailable for that location.") from exc
-
-    print("[WeatherTool] streaming widget")
-    try:
-        await ctx.context.stream_widget(widget, copy_text=copy_text)
-    except Exception as exc:  # noqa: BLE001
-        print("[WeatherTool] widget stream failed", {"error": str(exc)})
-        raise ValueError("Weather data is currently unavailable for that location.") from exc
-
-    print("[WeatherTool] widget streamed")
-
-    observed = data.observation_time.isoformat() if data.observation_time else None
-
-    return {
-        "location": data.location,
-        "unit": normalized_unit,
-        "observed_at": observed,
-    }
 
 
 def _user_message_text(item: UserMessageItem) -> str:
@@ -204,7 +138,7 @@ class FactAssistantServer(ChatKitServer[dict[str, Any]]):
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
-        tools = [save_fact, switch_theme, get_weather]
+        tools = [save_fact, switch_theme]
         self.assistant = Agent[FactAgentContext](
             model=MODEL,
             name="ChatKit Guide",
