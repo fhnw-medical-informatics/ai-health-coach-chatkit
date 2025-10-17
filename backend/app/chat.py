@@ -236,6 +236,20 @@ class FactAssistantServer(ChatKitServer[dict[str, Any]]):
         if agent_input is None:
             return
 
+        # Inject saved facts into the prompt context
+        try:
+            saved_facts = await fact_store.list_saved()
+            if saved_facts:
+                facts_text = "; ".join([fact.text for fact in saved_facts])
+                facts_context = f"You know the following facts about this user: {facts_text}"
+                
+                if isinstance(agent_input, str):
+                    agent_input = f"{facts_context}\n\nCurrent request: {agent_input}"
+                elif isinstance(agent_input, dict) and "content" in agent_input:
+                    agent_input["content"] = f"{facts_context}\n\nCurrent request: {agent_input['content']}"
+        except Exception as e:
+            logging.warning(f"Failed to retrieve user facts for context: {e}")
+
         result = Runner.run_streamed(
             self.assistant,
             agent_input,
