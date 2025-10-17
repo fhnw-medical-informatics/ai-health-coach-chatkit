@@ -29,7 +29,7 @@ from openai.types.responses import ResponseInputContentParam
 from pydantic import ConfigDict, Field
 
 from .constants import INSTRUCTIONS, MODEL
-from .facts import Fact, fact_store
+from .medications import Medication, medication_store
 from .memory_store import MemoryStore
 
 # If you want to check what's going on under the hood, set this to DEBUG
@@ -58,13 +58,13 @@ def _is_tool_completion_item(item: Any) -> bool:
     return isinstance(item, ClientToolCallItem)
 
 
-class FactAgentContext(AgentContext):
+class HealthCoachAgentContext(AgentContext):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     store: Annotated[MemoryStore, Field(exclude=True)]
     request_context: dict[str, Any]
 
 
-async def _stream_saved_hidden(ctx: RunContextWrapper[FactAgentContext], fact: Fact) -> None:
+async def _stream_saved_hidden(ctx: RunContextWrapper[HealthCoachAgentContext], medication: Medication) -> None:
     await ctx.context.stream(
         ThreadItemDoneEvent(
             item=HiddenContextItem(
@@ -72,40 +72,37 @@ async def _stream_saved_hidden(ctx: RunContextWrapper[FactAgentContext], fact: F
                 thread_id=ctx.context.thread.id,
                 created_at=datetime.now(),
                 content=(
-                    f'<FACT_SAVED id="{fact.id}" threadId="{ctx.context.thread.id}">{fact.text}</FACT_SAVED>'
+                    f'<MEDICATION_SAVED id="{medication.id}" threadId="{ctx.context.thread.id}">{medication.name}</MEDICATION_SAVED>'
                 ),
             ),
         )
     )
 
 
-@function_tool(description_override="Record a fact shared by the user so it is saved immediately.")
-async def save_fact(
-    ctx: RunContextWrapper[FactAgentContext],
-    fact: str,
+@function_tool(description_override="Record a medication when the user mentions taking, buying, or using any medication. Use your medical knowledge to format the medication name properly (e.g., 'ibuprofen' → 'Ibuprofen', 'vitamin d' → 'Vitamin D', 'omega 3' → 'Omega-3'). The system automatically prevents duplicate medications, so you can safely call this tool each time a medication is mentioned.")
+async def save_medication(
+    ctx: RunContextWrapper[HealthCoachAgentContext],
+    medication_name: str,
 ) -> dict[str, str] | None:
     try:
-        saved = await fact_store.create(text=fact)
-        confirmed = await fact_store.mark_saved(saved.id)
-        if confirmed is None:
-            raise ValueError("Failed to save fact")
-        await _stream_saved_hidden(ctx, confirmed)
+        saved = await medication_store.create(name=medication_name)
+        await _stream_saved_hidden(ctx, saved)
         ctx.context.client_tool_call = ClientToolCall(
-            name="record_fact",
-            arguments={"fact_id": confirmed.id, "fact_text": confirmed.text},
+            name="record_medication",
+            arguments={"medication_name": saved.name},
         )
-        print(f"FACT SAVED: {confirmed}")
-        return {"fact_id": confirmed.id, "status": "saved"}
+        print(f"MEDICATION SAVED: {saved}")
+        return {"medication_name": saved.name, "status": "saved"}
     except Exception:
-        logging.exception("Failed to save fact")
+        logging.exception("Failed to save medication")
         return None
 
 
 @function_tool(
-    description_override="Switch the chat interface between light and dark color schemes."
+    description_override="Switch the chat interface between light and dark color schemes. Use this when the user requests to change the theme, switch to dark mode, light mode, or change the appearance. Accepts 'light' or 'dark' as the theme parameter."
 )
 async def switch_theme(
-    ctx: RunContextWrapper[FactAgentContext],
+    ctx: RunContextWrapper[HealthCoachAgentContext],
     theme: str,
 ) -> dict[str, str] | None:
     logging.debug(f"Switching theme to {theme}")
@@ -132,16 +129,16 @@ def _user_message_text(item: UserMessageItem) -> str:
     return " ".join(parts).strip()
 
 
-class FactAssistantServer(ChatKitServer[dict[str, Any]]):
-    """ChatKit server wired up with the fact-recording tool."""
+class HealthCoachServer(ChatKitServer[dict[str, Any]]):
+    """Health Coach server with medication management and other health features."""
 
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
-        tools = [save_fact, switch_theme]
-        self.assistant = Agent[FactAgentContext](
+        tools = [save_medication, switch_theme]
+        self.assistant = Agent[HealthCoachAgentContext](
             model=MODEL,
-            name="ChatKit Guide",
+            name="Health Coach",
             instructions=INSTRUCTIONS,
             tools=tools,  # type: ignore[arg-type]
         )
@@ -153,7 +150,7 @@ class FactAssistantServer(ChatKitServer[dict[str, Any]]):
         item: UserMessageItem | None,
         context: dict[str, Any],
     ) -> AsyncIterator[ThreadStreamEvent]:
-        agent_context = FactAgentContext(
+        agent_context = HealthCoachAgentContext(
             thread=thread,
             store=self.store,
             request_context=context,
@@ -170,19 +167,19 @@ class FactAssistantServer(ChatKitServer[dict[str, Any]]):
         if agent_input is None:
             return
 
-        # Inject saved facts into the prompt context
+        # Inject saved medications into the prompt context
         try:
-            saved_facts = await fact_store.list_saved()
-            if saved_facts:
-                facts_text = "; ".join([fact.text for fact in saved_facts])
-                facts_context = f"You know the following facts about this user: {facts_text}"
+            saved_medications = await medication_store.list_all()
+            if saved_medications:
+                medications_text = "; ".join([medication.name for medication in saved_medications])
+                medications_context = f"You know the following medications about this user: {medications_text}"
                 
                 if isinstance(agent_input, str):
-                    agent_input = f"{facts_context}\n\nCurrent request: {agent_input}"
+                    agent_input = f"{medications_context}\n\nCurrent request: {agent_input}"
                 elif isinstance(agent_input, dict) and "content" in agent_input:
-                    agent_input["content"] = f"{facts_context}\n\nCurrent request: {agent_input['content']}"
+                    agent_input["content"] = f"{medications_context}\n\nCurrent request: {agent_input['content']}"
         except Exception as e:
-            logging.warning(f"Failed to retrieve user facts for context: {e}")
+            logging.warning(f"Failed to retrieve user medications for context: {e}")
 
         result = Runner.run_streamed(
             self.assistant,
@@ -299,6 +296,6 @@ class FactAssistantServer(ChatKitServer[dict[str, Any]]):
         )
 
 
-def create_chatkit_server() -> FactAssistantServer | None:
+def create_chatkit_server() -> HealthCoachServer | None:
     """Return a configured ChatKit server instance if dependencies are available."""
-    return FactAssistantServer()
+    return HealthCoachServer()

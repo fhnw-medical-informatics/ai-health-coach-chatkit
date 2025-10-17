@@ -1,5 +1,3 @@
-import { StartScreenPrompt } from "@openai/chatkit";
-
 export const CHATKIT_API_URL =
   import.meta.env.VITE_CHATKIT_API_URL ?? "/chatkit";
 
@@ -12,22 +10,22 @@ export const CHATKIT_API_URL =
 export const CHATKIT_API_DOMAIN_KEY =
   import.meta.env.VITE_CHATKIT_API_DOMAIN_KEY ?? "domain_pk_localhost_dev";
 
-export const FACTS_API_URL = import.meta.env.VITE_FACTS_API_URL ?? "/facts";
+export const MEDICATIONS_API_URL = import.meta.env.VITE_MEDICATIONS_API_URL ?? "/medications";
 
 export const THEME_STORAGE_KEY = "chatkit-boilerplate-theme";
 
-export const GREETING = "Welcome to the ChatKit Demo";
+export const GREETING = "Welcome to your Health Coach";
 
-export const STARTER_PROMPTS: StartScreenPrompt[] = [
+export const STARTER_PROMPTS = [
   {
     label: "What can you do?",
     prompt: "What can you do?",
     icon: "circle-question",
   },
   {
-    label: "My name is Kaz",
-    prompt: "My name is Kaz",
-    icon: "book-open",
+    label: "I bought ibuprofen",
+    prompt: "I bought ibuprofen",
+    icon: "lightbulb",
   },
   {
     label: "Change the theme to dark mode",
@@ -36,4 +34,4 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
   },
 ];
 
-export const PLACEHOLDER_INPUT = "Share a fact about yourself";
+export const PLACEHOLDER_INPUT = "Tell me about your medications";

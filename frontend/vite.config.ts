@@ -14,7 +14,7 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
       },
-      "/facts": {
+      "/medications": {
         target: backendTarget,
         changeOrigin: true,
       },

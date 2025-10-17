@@ -1,18 +1,18 @@
-import { useRef } from "react";
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
-import {
-  CHATKIT_API_URL,
-  CHATKIT_API_DOMAIN_KEY,
-  STARTER_PROMPTS,
-  PLACEHOLDER_INPUT,
-  GREETING,
-} from "../lib/config";
-import type { FactAction } from "../hooks/useFacts";
+import { useRef } from "react";
 import type { ColorScheme } from "../hooks/useColorScheme";
+import type { MedicationAction } from "../hooks/useMedications";
+import {
+    CHATKIT_API_DOMAIN_KEY,
+    CHATKIT_API_URL,
+    GREETING,
+    PLACEHOLDER_INPUT,
+    STARTER_PROMPTS,
+} from "../lib/config";
 
 type ChatKitPanelProps = {
   theme: ColorScheme;
-  onWidgetAction: (action: FactAction) => Promise<void>;
+  onWidgetAction: (action: MedicationAction) => Promise<void>;
   onResponseEnd: () => void;
   onThemeRequest: (scheme: ColorScheme) => void;
 };
@@ -23,7 +23,7 @@ export function ChatKitPanel({
   onResponseEnd,
   onThemeRequest,
 }: ChatKitPanelProps) {
-  const processedFacts = useRef(new Set<string>());
+  const processedMedications = useRef(new Set<string>());
 
   const chatkit = useChatKit({
     api: { url: CHATKIT_API_URL, domainKey: CHATKIT_API_DOMAIN_KEY },
@@ -65,20 +65,18 @@ export function ChatKitPanel({
         return { success: false };
       }
 
-      if (invocation.name === "record_fact") {
-        const id = String(invocation.params.fact_id ?? "");
-        const text = String(invocation.params.fact_text ?? "");
-        if (!id || processedFacts.current.has(id)) {
-          return { success: true };
-        }
-        processedFacts.current.add(id);
-        void onWidgetAction({
-          type: "save",
-          factId: id,
-          factText: text.replace(/\s+/g, " ").trim(),
-        });
-        return { success: true };
-      }
+              if (invocation.name === "record_medication") {
+                const name = String(invocation.params.medication_name ?? "");
+                if (!name || processedMedications.current.has(name)) {
+                  return { success: true };
+                }
+                processedMedications.current.add(name);
+                void onWidgetAction({
+                  type: "save",
+                  medicationName: name.replace(/\s+/g, " ").trim(),
+                });
+                return { success: true };
+              }
 
       return { success: false };
     },
@@ -86,7 +84,7 @@ export function ChatKitPanel({
       onResponseEnd();
     },
     onThreadChange: () => {
-      processedFacts.current.clear();
+      processedMedications.current.clear();
     },
     onError: ({ error }) => {
       // ChatKit handles displaying the error to the user
