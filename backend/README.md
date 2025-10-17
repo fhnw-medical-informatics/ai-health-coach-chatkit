@@ -1,19 +1,19 @@
-# ChatKit Python Backend
+# AI Health Coach Backend
 
-> For the steps to run both fronend and backend apps in this repo, please refer to the README.md at the top directory insteaad.
+> For the steps to run both frontend and backend apps in this repo, please refer to the README.md at the top directory instead.
 
-This FastAPI service wires up a minimal ChatKit server implementation with a single tool capable of recording short facts that users share in the conversation. Facts that are saved through the widget are exposed via the `/facts` REST endpoint so the frontend can render them alongside the chat experience.
+This FastAPI service provides a comprehensive health coaching backend with medication management, health tracking, and personalized wellness guidance. The service integrates with ChatKit to provide an intelligent conversational interface for health coaching.
 
 ## Features
 
 - **ChatKit endpoint** at `POST /chatkit` that streams responses using the ChatKit protocol when the optional ChatKit Python package is installed.
-- **Fact recording tool** that renders a confirmation widget with _Save_ and _Discard_ actions.
-- **Guardrail-ready system prompt** extracted into `app/constants.py` so it is easy to modify.
-- **Simple fact store** backed by in-memory storage in `app/facts.py`.
+- **Medication management tool** that records and tracks user medications with confirmation widgets.
+- **Health coaching system prompt** extracted into `app/constants.py` for easy customization.
+- **Medication store** backed by in-memory storage in `app/medications.py`.
 - **REST helpers**
-  - `GET  /facts` – list saved facts (used by the frontend list view)
-  - `POST /facts/{fact_id}/save` – mark a fact as saved
-  - `POST /facts/{fact_id}/discard` – discard a pending fact
+  - `GET  /medications` – list saved medications (used by the frontend medication cabinet)
+  - `POST /medications/{medication_id}/save` – mark a medication as saved
+  - `POST /medications/{medication_id}/discard` – discard a pending medication
   - `GET  /health` – surface a basic health indicator
 
 ## Getting started

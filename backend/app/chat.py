@@ -120,6 +120,8 @@ async def switch_theme(
 
 
 
+
+
 def _user_message_text(item: UserMessageItem) -> str:
     parts: list[str] = []
     for part in item.content:

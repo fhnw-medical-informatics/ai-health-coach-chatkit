@@ -41,9 +41,10 @@ export default function Home({
                   Health Coach
                 </h1>
                 <p className="max-w-xl text-sm text-slate-600 dark:text-slate-300">
-                  Your personal health coach that helps you with medication management,
-                  health guidance, and wellness advice. Track your medications and get
-                  personalized health support.
+                  Your comprehensive AI health coach providing personalized guidance on 
+                  nutrition, exercise, medication management, sleep optimization, stress 
+                  management, and overall wellness. Get expert health advice tailored to 
+                  your unique needs and goals.
                 </p>
               </div>
               <ThemeToggle value={scheme} onChange={handleThemeChange} />
@@ -52,10 +53,10 @@ export default function Home({
 
           <div>
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-              Your Medications
+              Your Medication Cabinet
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Medications appear here after you mention them in the conversation.
+              Your medications appear here after you mention them in the conversation.
             </p>
             <div className="mt-6">
               <div className="rounded-3xl border border-slate-200/60 bg-white/70 shadow-[0_35px_90px_-55px_rgba(15,23,42,0.45)] ring-1 ring-slate-200/50 backdrop-blur-sm dark:border-slate-800/70 dark:bg-slate-900/50 dark:shadow-[0_45px_95px_-60px_rgba(15,23,42,0.85)] dark:ring-slate-900/60">
@@ -66,8 +67,7 @@ export default function Home({
                         No medications recorded yet.
                       </span>
                       <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Start a conversation in the chat to record your first
-                        medication.
+                        Start a conversation in the chat to record your first medication.
                       </span>
                     </div>
                   ) : (

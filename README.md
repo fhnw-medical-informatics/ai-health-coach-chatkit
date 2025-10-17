@@ -1,13 +1,19 @@
-# OpenAI ChatKit Advanced Samples
+# AI Health Coach
 
-This repository contains a few advanced examples, which serve a complete [ChatKit](https://github.com/openai/chatkit-js) playground that pairs a FastAPI backend with a Vite + React frontend.
+This repository contains a comprehensive AI-powered health coaching application built with [ChatKit](https://github.com/openai/chatkit-js), featuring a FastAPI backend and a Vite + React frontend.
 
-The top-level [**backend**](backend) and [**frontend**](frontend) directories provide a basic project template that demonstrates ChatKit UI, widgets, and client tools.
+The application provides personalized health coaching with features including:
+- Medication management and tracking
+- Nutrition and meal planning guidance
+- Exercise and fitness recommendations
+- Sleep optimization advice
+- Stress management and mental health support
+- Chronic condition management
+- Preventive health measures
+- Lifestyle habit formation
+- Health goal setting and tracking
 
-- It runs a custom ChatKit server built with [ChatKit Python SDK](https://github.com/openai/chatkit-python) and [OpenAI Agents SDK for Python](https://github.com/openai/openai-agents-python).
-- Available agent tools: `switch_theme` and `record_fact` as client tools
-
-The Vite server proxies all `/chatkit` traffic straight to the local FastAPI service so you can develop the client and server in tandem without extra wiring.
+The system is built with [ChatKit Python SDK](https://github.com/openai/chatkit-python) and [OpenAI Agents SDK for Python](https://github.com/openai/openai-agents-python), providing an intelligent conversational interface for comprehensive health coaching.
 
 ## Quickstart
 
@@ -78,12 +84,15 @@ The Vite dev server runs at `http://127.0.0.1:5170`, and this works fine for loc
 
 If you want to verify this remote access during development, temporarily expose the app with a tunnel (e.g. `ngrok http 5170` or `cloudflared tunnel --url http://localhost:5170`) and add that hostname to your domain allowlist before testing.
 
-### 3. Explore the demo flow
+### 3. Explore the health coaching features
 
-With the app reachable locally or via a tunnel, open it in the browser and try a few interactions. The sample ChatKit UI ships with two tools that trigger visible actions in the pane:
+With the app reachable locally or via a tunnel, open it in the browser and try a few health coaching interactions:
 
-1. **Fact Recording** - prompt: `My name is Kaz`
-2. **Theme Switcher** - prompt: `Change the theme to dark mode` 
+1. **Medication Management** - prompt: `I take metformin twice daily for diabetes`
+2. **Nutrition Guidance** - prompt: `Help me plan a healthy breakfast`
+3. **Exercise Planning** - prompt: `I want to start a workout routine`
+4. **Sleep Optimization** - prompt: `I'm having trouble sleeping`
+5. **Theme Switcher** - prompt: `Change the theme to dark mode` 
 
 ## What's next
 
