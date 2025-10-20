@@ -1,105 +1,38 @@
 # AI Health Coach
 
-This repository contains a comprehensive AI-powered health coaching application built with [ChatKit](https://github.com/openai/chatkit-js), featuring a FastAPI backend and a Vite + React frontend.
+Demo of a multi-agent system powered by OpenAI ChatKit (based on the official [sample project](https://github.com/openai/openai-chatkit-advanced-samples)).
 
-The application provides personalized health coaching with features including:
-- Medication management and tracking
-- Nutrition and meal planning guidance
-- Exercise and fitness recommendations
-- Sleep optimization advice
-- Stress management and mental health support
-- Chronic condition management
-- Preventive health measures
-- Lifestyle habit formation
-- Health goal setting and tracking
+A supervisor agent triages health-related user queries to either a pharmacist or a psychologist agent.
+The pharmacist agent manages a cabinet of medications which are displayed in the user interface.
 
-The system is built with [ChatKit Python SDK](https://github.com/openai/chatkit-python) and [OpenAI Agents SDK for Python](https://github.com/openai/openai-agents-python), providing an intelligent conversational interface for comprehensive health coaching.
+This prototype shows how to use multi-agent systems for an orchestrated, intent-based user experience.
 
-## Quickstart
+> **WARNING**: Designed for educational use only!
 
-1. Start FastAPI backend API.
-2. Configure the frontend's domain key and launch the Vite app.
-3. Explore the demo flow.
+## Prerequisites
+- Node.js 20+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended) or `pip`
+- OpenAI API key exported as `OPENAI_API_KEY`
 
-Each step is detailed below.
+## Quick start (single install, one command to run both apps)
 
-### 1. Start FastAPI backend API
-
-From the repository root you can bootstrap the backend in one step:
+1) Set environment variables
 
 ```bash
-npm run backend
+export OPENAI_API_KEY="sk-proj-..."
 ```
 
-This command runs `uv sync` for `backend/` and launches Uvicorn on `http://127.0.0.1:8000`. Make sure [uv](https://docs.astral.sh/uv/getting-started/installation/) is installed and `OPENAI_API_KEY` is exported beforehand.
-
-If you prefer running the backend from inside `backend/`, follow the manual steps:
+2) Install dependencies (backend + frontend)
 
 ```bash
-cd backend
-uv sync
-export OPENAI_API_KEY=sk-proj-...
-uv run uvicorn app.main:app --reload --port 8000
-```
-
-If you don't have uv, you can do the same with:
-
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-export OPENAI_API_KEY=sk-proj-...
-uvicorn app.main:app --reload
-```
-
-The development API listens on `http://127.0.0.1:8000`.
-
-### 2. Run Vite + React frontend
-
-From the repository root you can start the frontend directly:
-
-```bash
-npm run frontend
-```
-
-This script launches Vite on `http://127.0.0.1:5170`.
-
-To configure and run the frontend manually:
-
-```bash
-cd frontend
 npm install
-npm run dev
 ```
 
-Optional configuration hooks live in [`frontend/src/lib/config.ts`](frontend/src/lib/config.ts) if you want to tweak API URLs or UI defaults.
+3) Start backend and frontend together
 
-To launch both the backend and frontend together from the repository root, you can use `npm start`. This command also requires `uv` plus the necessary environment variables (for example `OPENAI_API_KEY`) to be set beforehand.
+```bash
+npm start
+```
 
-The Vite dev server runs at `http://127.0.0.1:5170`, and this works fine for local development. However, for production deployments:
-
-1. Host the frontend on infrastructure you control behind a managed domain.
-2. Register that domain on the [domain allowlist page](https://platform.openai.com/settings/organization/security/domain-allowlist) and add it to [`frontend/vite.config.ts`](frontend/vite.config.ts) under `server.allowedHosts`.
-3. Set `VITE_CHATKIT_API_DOMAIN_KEY` to the value returned by the allowlist page.
-
-If you want to verify this remote access during development, temporarily expose the app with a tunnel (e.g. `ngrok http 5170` or `cloudflared tunnel --url http://localhost:5170`) and add that hostname to your domain allowlist before testing.
-
-### 3. Explore the health coaching features
-
-With the app reachable locally or via a tunnel, open it in the browser and try a few health coaching interactions:
-
-1. **Medication Management** - prompt: `I take metformin twice daily for diabetes`
-2. **Nutrition Guidance** - prompt: `Help me plan a healthy breakfast`
-3. **Exercise Planning** - prompt: `I want to start a workout routine`
-4. **Sleep Optimization** - prompt: `I'm having trouble sleeping`
-5. **Theme Switcher** - prompt: `Change the theme to dark mode` 
-
-## What's next
-
-Under the [`examples`](examples) directory, you'll find three more sample apps that ground the starter kit in real-world scenarios:
-
-1. [**Customer Support**](examples/customer-support): airline customer support workflow.
-2. [**Knowledge Assistant**](examples/knowledge-assistant): knowledge-base agent backed by OpenAI's File Search tool.
-3. [**Marketing Assets**](examples/marketing-assets): marketing creative workflow.
-
-Each example under [`examples/`](examples) includes the helper scripts (`npm start`, `npm run frontend`, `npm run backend`) pre-configured with its dedicated ports, so you can `cd` into an example and run `npm start` to boot its backend and frontend together. Please note that when you run `npm start`, `uv` must already be installed and all required environment variables should be exported.
+&copy; 2025 FHNW Medical Informatics – Rahel Lüthy

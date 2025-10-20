@@ -2,9 +2,11 @@
   "name": "openai-chatkit-sample-apps",
   "private": true,
   "scripts": {
+    "install:all": "uv sync --directory backend && npm --prefix frontend ci",
+    "postinstall": "npm run install:all",
     "start": "concurrently --kill-others-on-fail --names backend,frontend \"npm run backend\" \"npm run frontend\"",
-    "frontend": "npm --prefix frontend install && npm --prefix frontend run dev",
-    "backend": "uv sync --directory backend && uv run --directory backend uvicorn app.main:app --reload --port 8000"
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "uv run --directory backend uvicorn app.main:app --reload --port 8000"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
