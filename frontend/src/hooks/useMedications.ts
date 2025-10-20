@@ -3,11 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { MEDICATIONS_API_URL } from "../lib/config";
 import type { MedicationRecord } from "../lib/medications";
 
-export type MedicationAction = {
-  type: "save" | "delete";
-  medicationName: string;
-};
-
 export function useMedications() {
   const [medications, setMedications] = useState<MedicationRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -31,30 +26,7 @@ export function useMedications() {
     }
   }, []);
 
-  const performAction = useCallback(async (action: MedicationAction) => {
-    if (action.type === "save") {
-      const name = action.medicationName.trim();
-      if (!name) {
-        return;
-      }
-      
-      // Add to local state immediately for UI responsiveness
-      setMedications((current) => {
-        if (current.some((medication) => medication.name === name)) {
-          return current;
-        }
-        const saved: MedicationRecord = {
-          name,
-          createdAt: new Date().toISOString(),
-        };
-        return [...current, saved];
-      });
-    } else if (action.type === "delete") {
-      setMedications((current) => current.filter((medication) => medication.name !== action.medicationName));
-    }
-  }, []);
-
-  const refresh = useCallback(() => {
+  const refreshMedications = useCallback(() => {
     fetchMedications();
   }, [fetchMedications]);
 
@@ -63,5 +35,5 @@ export function useMedications() {
     fetchMedications();
   }, [fetchMedications]);
 
-  return { medications, loading, error, refresh, performAction };
+  return { medications, loading, error, refreshMedications };
 }

@@ -13,7 +13,7 @@ export default function Home({
   scheme: ColorScheme;
   handleThemeChange: (scheme: ColorScheme) => void;
 }) {
-  const { medications, refresh, performAction } = useMedications();
+  const { medications, refreshMedications } = useMedications();
 
   const containerClass = clsx(
     "min-h-screen bg-gradient-to-br transition-colors duration-300",
@@ -28,8 +28,7 @@ export default function Home({
         <div className="relative w-full md:w-[45%] flex h-[90vh] items-stretch overflow-hidden rounded-3xl bg-white/80 shadow-[0_45px_90px_-45px_rgba(15,23,42,0.6)] ring-1 ring-slate-200/60 backdrop-blur md:h-[90vh] dark:bg-slate-900/70 dark:shadow-[0_45px_90px_-45px_rgba(15,23,42,0.85)] dark:ring-slate-800/60">
           <ChatKitPanel
             theme={scheme}
-            onWidgetAction={performAction}
-            onResponseEnd={refresh}
+            onResponseEnd={refreshMedications}
             onThemeRequest={handleThemeChange}
           />
         </div>

@@ -1,29 +1,24 @@
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
-import { useRef } from "react";
 import type { ColorScheme } from "../hooks/useColorScheme";
-import type { MedicationAction } from "../hooks/useMedications";
 import {
-    CHATKIT_API_DOMAIN_KEY,
-    CHATKIT_API_URL,
-    GREETING,
-    PLACEHOLDER_INPUT,
-    STARTER_PROMPTS,
+  CHATKIT_API_DOMAIN_KEY,
+  CHATKIT_API_URL,
+  GREETING,
+  PLACEHOLDER_INPUT,
+  STARTER_PROMPTS,
 } from "../lib/config";
 
 type ChatKitPanelProps = {
   theme: ColorScheme;
-  onWidgetAction: (action: MedicationAction) => Promise<void>;
   onResponseEnd: () => void;
   onThemeRequest: (scheme: ColorScheme) => void;
 };
 
 export function ChatKitPanel({
   theme,
-  onWidgetAction,
   onResponseEnd,
   onThemeRequest,
 }: ChatKitPanelProps) {
-  const processedMedications = useRef(new Set<string>());
 
   const chatkit = useChatKit({
     api: { url: CHATKIT_API_URL, domainKey: CHATKIT_API_DOMAIN_KEY },
@@ -53,38 +48,21 @@ export function ChatKitPanel({
       feedback: false,
     },
     onClientTool: async (invocation) => {
-      if (invocation.name === "switch_theme") {
-        const requested = invocation.params.theme;
-        if (requested === "light" || requested === "dark") {
-          if (import.meta.env.DEV) {
-            console.debug("[ChatKitPanel] switch_theme", requested);
-          }
-          onThemeRequest(requested);
-          return { success: true };
-        }
+      if (invocation.name !== "switch_theme") {
         return { success: false };
       }
-
-              if (invocation.name === "record_medication") {
-                const name = String(invocation.params.medication_name ?? "");
-                if (!name || processedMedications.current.has(name)) {
-                  return { success: true };
-                }
-                processedMedications.current.add(name);
-                void onWidgetAction({
-                  type: "save",
-                  medicationName: name.replace(/\s+/g, " ").trim(),
-                });
-                return { success: true };
-              }
-
-      return { success: false };
+      const requested = invocation.params.theme;
+      if (requested !== "light" && requested !== "dark") {
+        return { success: false };
+      }
+      onThemeRequest(requested);
+      return { success: true };
     },
     onResponseEnd: () => {
       onResponseEnd();
     },
     onThreadChange: () => {
-      processedMedications.current.clear();
+      // Thread changed - any necessary cleanup can be added here
     },
     onError: ({ error }) => {
       // ChatKit handles displaying the error to the user

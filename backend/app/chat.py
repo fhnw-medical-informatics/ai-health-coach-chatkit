@@ -87,10 +87,6 @@ async def save_medication(
     try:
         saved = await medication_store.create(name=medication_name)
         await _stream_saved_hidden(ctx, saved)
-        ctx.context.client_tool_call = ClientToolCall(
-            name="record_medication",
-            arguments={"medication_name": saved.name},
-        )
         print(f"MEDICATION SAVED: {saved}")
         return {"medication_name": saved.name, "status": "saved"}
     except Exception:
