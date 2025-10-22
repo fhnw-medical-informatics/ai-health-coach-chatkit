@@ -22,6 +22,7 @@ export function ChatKitPanel({
 
   const chatkit = useChatKit({
     api: { url: CHATKIT_API_URL, domainKey: CHATKIT_API_DOMAIN_KEY },
+    header: { enabled: false },
     theme: {
       colorScheme: theme,
       color: {
@@ -44,9 +45,6 @@ export function ChatKitPanel({
     composer: {
       placeholder: PLACEHOLDER_INPUT,
     },
-    threadItemActions: {
-      feedback: false,
-    },
     onClientTool: async (invocation) => {
       if (invocation.name !== "switch_theme") {
         return { success: false };
@@ -60,9 +58,6 @@ export function ChatKitPanel({
     },
     onResponseEnd: () => {
       onResponseEnd();
-    },
-    onThreadChange: () => {
-      // Thread changed - any necessary cleanup can be added here
     },
     onError: ({ error }) => {
       // ChatKit handles displaying the error to the user
