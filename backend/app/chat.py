@@ -72,7 +72,7 @@ async def _stream_saved_hidden(ctx: RunContextWrapper[HealthCoachAgentContext], 
                 thread_id=ctx.context.thread.id,
                 created_at=datetime.now(),
                 content=(
-                    f'<MEDICATION_SAVED id="{medication.id}" threadId="{ctx.context.thread.id}">{medication.name}</MEDICATION_SAVED>'
+                    f'<MEDICATION_SAVED id="{medication.name}" threadId="{ctx.context.thread.id}">{medication.name}</MEDICATION_SAVED>'
                 ),
             ),
         )
