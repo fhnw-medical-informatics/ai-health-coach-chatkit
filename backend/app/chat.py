@@ -28,7 +28,7 @@ from chatkit.types import (
 from openai.types.responses import ResponseInputContentParam
 from pydantic import ConfigDict, Field
 
-from .constants import INSTRUCTIONS, MODEL
+from .agents import create_agents
 from .medications import Medication, medication_store
 from .memory_store import MemoryStore
 
@@ -128,18 +128,21 @@ def _user_message_text(item: UserMessageItem) -> str:
 
 
 class HealthCoachServer(ChatKitServer[dict[str, Any]]):
-    """Health Coach server with medication management and other health features."""
+    """Health Coach server with multi-agent setup for specialized health support."""
 
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
-        tools = [save_medication, switch_theme]
-        self.assistant = Agent[HealthCoachAgentContext](
-            model=MODEL,
-            name="Health Coach",
-            instructions=INSTRUCTIONS,
-            tools=tools,  # type: ignore[arg-type]
-        )
+        
+        # Create the multi-agent setup
+        self.pharmacist, self.psychologist, self.supervisor = create_agents()
+        
+        # TODO: Dedicated agent for UX related questions
+        # Add theme switching tool to the pharmacist agent (medication tools are already included)
+        self.pharmacist.tools.append(switch_theme)  # type: ignore[attr-defined]
+        
+        # Use supervisor as the main agent for routing
+        self.assistant = self.supervisor
         self._thread_item_converter = self._init_thread_item_converter()
 
     async def respond(
@@ -164,20 +167,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         agent_input = await self._to_agent_input(thread, target_item)
         if agent_input is None:
             return
-
-        # Inject saved medications into the prompt context
-        try:
-            saved_medications = await medication_store.list_all()
-            if saved_medications:
-                medications_text = "; ".join([medication.name for medication in saved_medications])
-                medications_context = f"You know the following medications about this user: {medications_text}"
-                
-                if isinstance(agent_input, str):
-                    agent_input = f"{medications_context}\n\nCurrent request: {agent_input}"
-                elif isinstance(agent_input, dict) and "content" in agent_input:
-                    agent_input["content"] = f"{medications_context}\n\nCurrent request: {agent_input['content']}"
-        except Exception as e:
-            logging.warning(f"Failed to retrieve user medications for context: {e}")
 
         result = Runner.run_streamed(
             self.assistant,
