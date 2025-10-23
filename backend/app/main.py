@@ -60,6 +60,12 @@ async def delete_medication(medication_name: str) -> dict[str, Any]:
     return {"message": "Medication deleted successfully"}
 
 
+@app.delete("/medications")
+async def clear_all_medications() -> dict[str, Any]:
+    count = await medication_store.clear_all()
+    return {"message": f"Cleared {count} medications successfully"}
+
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "healthy"}

@@ -30,10 +30,30 @@ export function useMedications() {
     fetchMedications();
   }, [fetchMedications]);
 
+  const clearAllMedications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(MEDICATIONS_API_URL, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to clear medications: ${response.statusText}`);
+      }
+      // Clear local state immediately
+      setMedications([]);
+    } catch (err) {
+      console.error("Failed to clear medications:", err);
+      setError(err instanceof Error ? err.message : "Failed to clear medications");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Fetch medications on mount
   useEffect(() => {
     fetchMedications();
   }, [fetchMedications]);
 
-  return { medications, loading, error, refreshMedications };
+  return { medications, loading, error, refreshMedications, clearAllMedications };
 }

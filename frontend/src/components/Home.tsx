@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useEffect, useState } from "react";
 
 import { ColorScheme } from "../hooks/useColorScheme";
 import { useMedications } from "../hooks/useMedications";
@@ -13,7 +14,18 @@ export default function Home({
   scheme: ColorScheme;
   handleThemeChange: (scheme: ColorScheme) => void;
 }) {
-  const { medications, refreshMedications } = useMedications();
+  const { medications, refreshMedications, clearAllMedications } = useMedications();
+  const [chatKey, setChatKey] = useState(Date.now());
+
+  // Clear everything on mount (browser refresh)
+  useEffect(() => {
+    const clearEverything = async () => {
+      await clearAllMedications();
+      // Force ChatKit to reset by changing its key
+      setChatKey(Date.now());
+    };
+    clearEverything();
+  }, [clearAllMedications]);
 
   const containerClass = clsx(
     "min-h-screen bg-gradient-to-br transition-colors duration-300",
@@ -27,6 +39,7 @@ export default function Home({
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col-reverse gap-10 px-6 pt-4 pb-10 md:py-10 lg:flex-row">
         <div className="relative w-full md:w-[45%] flex h-[90vh] items-stretch overflow-hidden rounded-3xl bg-white/80 shadow-[0_45px_90px_-45px_rgba(15,23,42,0.6)] ring-1 ring-slate-200/60 backdrop-blur md:h-[90vh] dark:bg-slate-900/70 dark:shadow-[0_45px_90px_-45px_rgba(15,23,42,0.85)] dark:ring-slate-800/60">
           <ChatKitPanel
+            key={chatKey}
             theme={scheme}
             onResponseEnd={refreshMedications}
             onThemeRequest={handleThemeChange}

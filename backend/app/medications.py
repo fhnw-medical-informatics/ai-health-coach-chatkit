@@ -70,6 +70,13 @@ class MedicationStore:
                 return True
             return False
 
+    async def clear_all(self) -> int:
+        """Clear all medications. Returns the number of medications that were deleted."""
+        async with self._lock:
+            count = len(self._medications)
+            self._medications.clear()
+            return count
+
 
 medication_store = MedicationStore()
 """Global instance used by the API and the ChatKit workflow."""
