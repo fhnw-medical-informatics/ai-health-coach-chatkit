@@ -1,4 +1,4 @@
-"""ChatKit server integration for the boilerplate backend."""
+"""ChatKit server integration for the health coach backend."""
 
 from __future__ import annotations
 
@@ -29,18 +29,12 @@ from .psychologist import create_psychologist_agent
 from .supervisor import create_supervisor_agent
 from .memory_store import MemoryStore
 
-# If you want to check what's going on under the hood, set this to DEBUG
+# Set to DEBUG for detailed logging
 logging.basicConfig(level=logging.INFO)
 
 
 def _is_tool_completion_item(item: Any) -> bool:
     return isinstance(item, ClientToolCallItem)
-
-
-class HealthCoachAgentContext(AgentContext):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    store: Annotated[MemoryStore, Field(exclude=True)]
-    request_context: dict[str, Any]
 
 
 
@@ -60,7 +54,7 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
         
-        # Create the multi-agent setup
+        # Create multi-agent setup
         pharmacist = create_pharmacist_agent()
         psychologist = create_psychologist_agent()
         self.assistant = create_supervisor_agent([pharmacist, psychologist])
@@ -72,7 +66,7 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         item: UserMessageItem | None,
         context: dict[str, Any],
     ) -> AsyncIterator[ThreadStreamEvent]:
-        agent_context = HealthCoachAgentContext(
+        agent_context = AgentContext(
             thread=thread,
             store=self.store,
             request_context=context,
@@ -188,5 +182,4 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
 
 
 def create_chatkit_server() -> HealthCoachServer | None:
-    """Return a configured ChatKit server instance if dependencies are available."""
     return HealthCoachServer()

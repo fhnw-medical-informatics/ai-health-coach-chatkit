@@ -11,9 +11,9 @@ from chatkit.agents import AgentContext
 from .model import MODEL
 from .medications import medication_store
 
-PHARMACIST_INSTRUCTIONS = """You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents of the medicine cabinet).
-If users report symptoms or conditions which are treatable with current medications in the medicine cabinet, suggest the appropriate medication and dosage.
-Be very careful with giving advice and suggest consulting with a healthcare provider for serious medical concerns."""
+PHARMACIST_INSTRUCTIONS = """You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents).
+If users report symptoms treatable with current medications, suggest the appropriate medication and dosage.
+Be very careful with advice and suggest consulting a healthcare provider for serious medical concerns."""
 
 
 @function_tool(description_override="List all medications in the patient's medicine cabinet. Use this to see what medications the patient currently has.")

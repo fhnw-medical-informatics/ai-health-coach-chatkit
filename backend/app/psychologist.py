@@ -27,5 +27,5 @@ def create_psychologist_agent() -> Agent[AgentContext]:
         name="Psychologist",
         model=MODEL,
         instructions=PSYCHOLOGIST_INSTRUCTIONS,
-        tools=[],  # No specific tools for psychologist currently
+        tools=[],  # No tools currently
     )

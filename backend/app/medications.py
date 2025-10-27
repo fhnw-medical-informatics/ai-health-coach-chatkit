@@ -1,4 +1,4 @@
-"""Simple in-memory store for user medications."""
+"""In-memory store for user medications."""
 
 from __future__ import annotations
 
@@ -79,4 +79,4 @@ class MedicationStore:
 
 
 medication_store = MedicationStore()
-"""Global instance used by the API and the ChatKit workflow."""
+"""Store instance used by the pharmacists agent and exposed as a REST API to keep the UI in sync."""

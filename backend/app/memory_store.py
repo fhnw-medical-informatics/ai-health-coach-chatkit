@@ -1,3 +1,5 @@
+"""In-memory store for chat threads (needed for ChatKit configuration but not actually used in the project)."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

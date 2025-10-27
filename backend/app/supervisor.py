@@ -10,12 +10,14 @@ from chatkit.agents import AgentContext, ClientToolCall
 
 from .model import MODEL
 
+# NOTE: Must match frontend tool name
 CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
 SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
 
-SUPERVISOR_INSTRUCTIONS = """You are a supervisor tasked with routing user queries to the appropriate specialist.
-Never answer questions yourself, only focus on triage.
-You can also handle basic UI requests by using your tools."""
+
+SUPERVISOR_INSTRUCTIONS = """You are a supervisor that routes user queries to appropriate specialists.
+Never answer health questions yourself, only focus on triage.
+You can also handle basic UI requests using your tools."""
 
 
 def _normalize_color_scheme(value: str) -> str:
@@ -52,7 +54,7 @@ async def switch_theme(
 
 
 def create_supervisor_agent(agents: list[Agent[AgentContext]]) -> Agent[AgentContext]:
-    """Create a generic supervisor agent that routes queries to any provided agents."""
+    """Create a generic supervisor agent that routes queries to provided agents."""
     return Agent(
         name="Supervisor",
         model=MODEL,

@@ -1,4 +1,4 @@
-"""FastAPI entrypoint wiring the ChatKit server and REST endpoints."""
+"""Exposes the ChatKit server and medication management endpoints as REST APIs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from .chat import (
 )
 from .medications import medication_store
 
-app = FastAPI(title="ChatKit API")
+app = FastAPI(title="AI Health Coach API")
 
 _chatkit_server: HealthCoachServer | None = create_chatkit_server()
 
