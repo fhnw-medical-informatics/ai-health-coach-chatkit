@@ -4,22 +4,18 @@ from __future__ import annotations
 
 import inspect
 import logging
-from datetime import datetime
-from typing import Annotated, Any, AsyncIterator, Final, Literal
-from uuid import uuid4
+from typing import Annotated, Any, AsyncIterator
 
-from agents import Agent, RunContextWrapper, Runner, function_tool
+from agents import Runner
 from chatkit.agents import (
     AgentContext,
-    ClientToolCall,
     ThreadItemConverter,
     stream_agent_response,
 )
-from chatkit.server import ChatKitServer, ThreadItemDoneEvent
+from chatkit.server import ChatKitServer
 from chatkit.types import (
     Attachment,
     ClientToolCallItem,
-    HiddenContextItem,
     ThreadItem,
     ThreadMetadata,
     ThreadStreamEvent,
@@ -28,30 +24,13 @@ from chatkit.types import (
 from openai.types.responses import ResponseInputContentParam
 from pydantic import ConfigDict, Field
 
-from .agents import create_agents
-from .medications import Medication, medication_store
+from .pharmacist import create_pharmacist_agent
+from .psychologist import create_psychologist_agent
+from .supervisor import create_supervisor_agent
 from .memory_store import MemoryStore
 
 # If you want to check what's going on under the hood, set this to DEBUG
 logging.basicConfig(level=logging.INFO)
-
-SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
-CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
-
-
-def _normalize_color_scheme(value: str) -> str:
-    normalized = str(value).strip().lower()
-    if normalized in SUPPORTED_COLOR_SCHEMES:
-        return normalized
-    if "dark" in normalized:
-        return "dark"
-    if "light" in normalized:
-        return "light"
-    raise ValueError("Theme must be either 'light' or 'dark'.")
-
-
-def _gen_id(prefix: str) -> str:
-    return f"{prefix}_{uuid4().hex[:8]}"
 
 
 def _is_tool_completion_item(item: Any) -> bool:
@@ -62,59 +41,6 @@ class HealthCoachAgentContext(AgentContext):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     store: Annotated[MemoryStore, Field(exclude=True)]
     request_context: dict[str, Any]
-
-
-async def _stream_saved_hidden(ctx: RunContextWrapper[HealthCoachAgentContext], medication: Medication) -> None:
-    await ctx.context.stream(
-        ThreadItemDoneEvent(
-            item=HiddenContextItem(
-                id=_gen_id("msg"),
-                thread_id=ctx.context.thread.id,
-                created_at=datetime.now(),
-                content=(
-                    f'<MEDICATION_SAVED id="{medication.name}" threadId="{ctx.context.thread.id}">{medication.name}</MEDICATION_SAVED>'
-                ),
-            ),
-        )
-    )
-
-
-@function_tool(description_override="Record a medication when the user mentions taking, buying, or using any medication. Use your medical knowledge to format the medication name properly (e.g., 'ibuprofen' → 'Ibuprofen', 'vitamin d' → 'Vitamin D', 'omega 3' → 'Omega-3'). The system automatically prevents duplicate medications, so you can safely call this tool each time a medication is mentioned.")
-async def save_medication(
-    ctx: RunContextWrapper[HealthCoachAgentContext],
-    medication_name: str,
-) -> dict[str, str] | None:
-    try:
-        saved = await medication_store.create(name=medication_name)
-        await _stream_saved_hidden(ctx, saved)
-        print(f"MEDICATION SAVED: {saved}")
-        return {"medication_name": saved.name, "status": "saved"}
-    except Exception:
-        logging.exception("Failed to save medication")
-        return None
-
-
-@function_tool(
-    description_override="Switch the chat interface between light and dark color schemes. Use this when the user requests to change the theme, switch to dark mode, light mode, or change the appearance. Accepts 'light' or 'dark' as the theme parameter."
-)
-async def switch_theme(
-    ctx: RunContextWrapper[HealthCoachAgentContext],
-    theme: str,
-) -> dict[str, str] | None:
-    logging.debug(f"Switching theme to {theme}")
-    try:
-        requested = _normalize_color_scheme(theme)
-        ctx.context.client_tool_call = ClientToolCall(
-            name=CLIENT_THEME_TOOL_NAME,
-            arguments={"theme": requested},
-        )
-        return {"theme": requested}
-    except Exception:
-        logging.exception("Failed to switch theme")
-        return None
-
-
-
 
 
 
@@ -135,14 +61,9 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         super().__init__(self.store)
         
         # Create the multi-agent setup
-        self.pharmacist, self.psychologist, self.supervisor = create_agents()
-        
-        # TODO: Dedicated agent for UX related questions
-        # Add theme switching tool to the pharmacist agent (medication tools are already included)
-        self.pharmacist.tools.append(switch_theme)  # type: ignore[attr-defined]
-        
-        # Use supervisor as the main agent for routing
-        self.assistant = self.supervisor
+        pharmacist = create_pharmacist_agent()
+        psychologist = create_psychologist_agent()
+        self.assistant = create_supervisor_agent([pharmacist, psychologist])
         self._thread_item_converter = self._init_thread_item_converter()
 
     async def respond(
@@ -264,23 +185,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
             return _user_message_text(item)
 
         return None
-
-    async def _add_hidden_item(
-        self,
-        thread: ThreadMetadata,
-        context: dict[str, Any],
-        content: str,
-    ) -> None:
-        await self.store.add_thread_item(
-            thread.id,
-            HiddenContextItem(
-                id=_gen_id("msg"),
-                thread_id=thread.id,
-                created_at=datetime.now(),
-                content=content,
-            ),
-            context,
-        )
 
 
 def create_chatkit_server() -> HealthCoachServer | None:

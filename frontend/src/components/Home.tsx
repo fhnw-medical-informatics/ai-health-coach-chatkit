@@ -17,14 +17,14 @@ export default function Home({
   const { medications, refreshMedications, clearAllMedications } = useMedications();
   const [chatKey, setChatKey] = useState(Date.now());
 
-  // Clear everything on mount (browser refresh)
   useEffect(() => {
-    const clearEverything = async () => {
+    const onBrowserRefresh = async () => {
       await clearAllMedications();
       // Force ChatKit to reset by changing its key
       setChatKey(Date.now());
+      handleThemeChange("light");
     };
-    clearEverything();
+    onBrowserRefresh();
   }, [clearAllMedications]);
 
   const containerClass = clsx(
