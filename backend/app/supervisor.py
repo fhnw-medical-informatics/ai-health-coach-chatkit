@@ -16,7 +16,7 @@ SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
 
 
 SUPERVISOR_INSTRUCTIONS = """You are a supervisor that routes user queries to appropriate specialists.
-Never answer health questions yourself, only focus on triage.
+Do not ask questions, never answer yourself, and only focus on triage.
 You can also handle basic UI requests using your tools."""
 
 
@@ -55,10 +55,14 @@ async def switch_theme(
 
 def create_supervisor_agent(agents: list[Agent[AgentContext]]) -> Agent[AgentContext]:
     """Create a generic supervisor agent that routes queries to provided agents."""
+    
+    # Create handoffs - the agent name will be included in the tool call by default
+    handoffs = [handoff(agent) for agent in agents]
+    
     return Agent(
         name="Supervisor",
         model=MODEL,
         instructions=SUPERVISOR_INSTRUCTIONS,
         tools=[switch_theme],
-        handoffs=[handoff(agent) for agent in agents],
+        handoffs=handoffs,
     )
