@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 from typing import Annotated, Any, AsyncIterator
@@ -12,6 +13,7 @@ from chatkit.agents import (
     ThreadItemConverter,
     stream_agent_response,
 )
+from chatkit.server import stream_widget
 from chatkit.server import ChatKitServer
 from chatkit.types import (
     Attachment,
@@ -21,6 +23,7 @@ from chatkit.types import (
     ThreadStreamEvent,
     UserMessageItem,
 )
+from chatkit.widgets import Card, Markdown
 from openai.types.responses import ResponseInputContentParam
 from pydantic import ConfigDict, Field
 
@@ -89,8 +92,33 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
             context=agent_context,
         )
 
-        async for event in stream_agent_response(agent_context, result):
-            yield event
+        # Output agent response as a widget so we can style it
+        async def widget_generator():
+            text_acc = ""
+            # IMPORTANT: give Markdown an id and streaming=True for incremental updates
+            md = Markdown(id="agent-response", value="", streaming=True)
+            
+            # Yield initial empty widget first
+            yield Card(size="md", children=[md])
+
+            async for event in stream_agent_response(agent_context, result):
+                
+                # Check if this is a text delta event
+                if hasattr(event, 'type') and event.type == "thread.item.updated":
+                    if hasattr(event, 'update') and hasattr(event.update, 'type'):
+                        if event.update.type == "assistant_message.content_part.text_delta":
+                            delta = event.update.delta
+                            text_acc += delta
+                            md = Markdown(id="agent-response", value=text_acc, streaming=True)
+                            # yield a whole widget tree each time; ChatKit diffs it
+                            yield Card(size="md", children=[md])
+
+        async for ev in stream_widget(
+            thread,
+            widget_generator(),  # <- pass the generator
+            generate_id=lambda item_type: self.store.generate_item_id(item_type, thread, context),
+        ):
+            yield ev
         return
 
     async def to_message_content(self, _input: Attachment) -> ResponseInputContentParam:
