@@ -5,13 +5,12 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from typing import Annotated, Any, AsyncIterator
+from typing import Any, AsyncIterator
 
 from agents import Runner
 from chatkit.agents import (
     AgentContext,
     ThreadItemConverter,
-    stream_agent_response,
 )
 from chatkit.server import stream_widget
 from chatkit.server import ChatKitServer
@@ -25,7 +24,6 @@ from chatkit.types import (
 )
 from chatkit.widgets import Card, Markdown
 from openai.types.responses import ResponseInputContentParam
-from pydantic import ConfigDict, Field
 
 from .pharmacist import create_pharmacist_agent
 from .psychologist import create_psychologist_agent
@@ -38,7 +36,6 @@ logging.basicConfig(level=logging.INFO)
 
 def _is_tool_completion_item(item: Any) -> bool:
     return isinstance(item, ClientToolCallItem)
-
 
 
 def _user_message_text(item: UserMessageItem) -> str:
@@ -56,7 +53,7 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
-        
+
         # Create multi-agent setup
         pharmacist = create_pharmacist_agent()
         psychologist = create_psychologist_agent()
@@ -86,36 +83,69 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         if agent_input is None:
             return
 
+        # --- color palette per agent name (light/dark pairs supported by ChatKit) ---
+        AGENT_BG = {
+            "Psychologist": {"light": "#e6f0ff", "dark": "#1e3a8a"},  # brighter blue
+            "Pharmacist":   {"light": "#e8f8f0", "dark": "#166534"},  # brighter green
+            "Supervisor":   {"light": "#f3f4f6", "dark": "#374151"},  # lighter neutral
+        }
+        def bg_for(name: str):
+            return AGENT_BG.get(name, {"light": "#f3f4f6", "dark": "#374151"})
+
+        # Run the multi-agent supervisor in streaming mode (Agents SDK stream)
         result = Runner.run_streamed(
             self.assistant,
             agent_input,
             context=agent_context,
         )
 
-        # Output agent response as a widget so we can style it
+        # Output agent response as a widget so we can style it (and update live)
         async def widget_generator():
+            # Start with whoever is currently "active" (likely Supervisor)
+            current_agent_name = getattr(self.assistant, "name", "Supervisor")
             text_acc = ""
-            # IMPORTANT: give Markdown an id and streaming=True for incremental updates
+
+            # Stable id is required for incremental Markdown updates
             md = Markdown(id="agent-response", value="", streaming=True)
-            
-            # Yield initial empty widget first
-            yield Card(size="md", children=[md])
+            card = Card(size="md", background=bg_for(current_agent_name), children=[md])
 
-            async for event in stream_agent_response(agent_context, result):
-                
-                # Check if this is a text delta event
-                if hasattr(event, 'type') and event.type == "thread.item.updated":
-                    if hasattr(event, 'update') and hasattr(event.update, 'type'):
-                        if event.update.type == "assistant_message.content_part.text_delta":
-                            delta = event.update.delta
-                            text_acc += delta
-                            md = Markdown(id="agent-response", value=text_acc, streaming=True)
-                            # yield a whole widget tree each time; ChatKit diffs it
-                            yield Card(size="md", children=[md])
+            # Yield initial empty card so the shell renders immediately
+            yield card
 
+            # Iterate the *Agents SDK* events directly so we can:
+            #  - detect handoffs to sub-agents and recolor the card
+            #  - append token deltas to the Markdown
+            async for ev in result.stream_events():
+                # ---- Detect agent handoff / active-agent updates ----
+                # We duck-type across SDK variants:
+                new_name = None
+                if hasattr(ev, "new_agent") and getattr(ev.new_agent, "name", None):
+                    new_name = ev.new_agent.name
+                elif hasattr(ev, "run_item") and getattr(ev.run_item, "agent", None):
+                    agent_obj_or_name = ev.run_item.agent
+                    new_name = getattr(agent_obj_or_name, "name", None) or str(agent_obj_or_name)
+
+                if new_name:
+                    current_agent_name = new_name
+                    card = Card(size="md", background=bg_for(current_agent_name), children=[md])
+                    yield card
+                    continue
+
+                # ---- Append text deltas from the Responses API passthrough ----
+                data = getattr(ev, "data", None)
+                data_type = getattr(data, "type", "") if data else ""
+                if data_type in ("response.output_text.delta", "output_text.delta", "output_text_delta"):
+                    delta = getattr(data, "delta", "") or getattr(data, "text", "")
+                    if delta:
+                        text_acc += delta
+                        md = Markdown(id="agent-response", value=text_acc, streaming=True)
+                        card = Card(size="md", background=bg_for(current_agent_name), children=[md])
+                        yield card
+
+        # Stream the widget updates to ChatKit UI
         async for ev in stream_widget(
             thread,
-            widget_generator(),  # <- pass the generator
+            widget_generator(),
             generate_id=lambda item_type: self.store.generate_item_id(item_type, thread, context),
         ):
             yield ev
