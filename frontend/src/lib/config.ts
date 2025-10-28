@@ -23,8 +23,13 @@ export const STARTER_PROMPTS = [
     icon: "circle-question",
   },
   {
-    label: "I bought ibuprofen",
-    prompt: "I bought ibuprofen",
+    label: "I bought Ibuprofen",
+    prompt: "I bought Ibuprofen",
+    icon: "lab",
+  },
+  {
+    label: "I am feeling a bit low on energy",
+    prompt: "I am feeling a bit low on energy",
     icon: "lightbulb",
   },
   {
@@ -34,4 +39,4 @@ export const STARTER_PROMPTS = [
   },
 ];
 
-export const PLACEHOLDER_INPUT = "Tell me about your medications";
+export const PLACEHOLDER_INPUT = "Tell me about your health concerns";

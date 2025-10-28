@@ -5,12 +5,11 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List
 
 
 def normalize_medication_name(name: str) -> str:
-    """Normalize medication name: trim whitespace only."""
-    return name.strip()
+    """Normalize medication name: trim whitespace and convert to title case."""
+    return name.strip().title()
 
 
 @dataclass(slots=True)
@@ -32,7 +31,7 @@ class MedicationStore:
     """Thread-safe helper that stores medications in memory using names as keys."""
 
     def __init__(self) -> None:
-        self._medications: Dict[str, Medication] = {}
+        self._medications: dict[str, Medication] = {}
         self._lock = asyncio.Lock()
 
     async def create(self, *, name: str) -> Medication:
@@ -50,7 +49,7 @@ class MedicationStore:
             self._medications[normalized_name] = medication
             return medication
 
-    async def list_all(self) -> List[Medication]:
+    async def list_all(self) -> list[Medication]:
         """Return all medications sorted by name."""
         async with self._lock:
             return sorted(self._medications.values(), key=lambda m: m.name)
