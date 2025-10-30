@@ -1,27 +1,17 @@
 # AI Health Coach Backend
 
-> For the steps to run both frontend and backend apps in this repo, please refer to the README.md at the top directory instead.
-
-This FastAPI service provides a comprehensive health coaching backend with medication management, health tracking, and personalized wellness guidance. The service integrates with ChatKit to provide an intelligent conversational interface for health coaching.
+A Python backend that exposes a multi-agent system powered by OpenAI ChatKit, as well as a REST API for medication management.
 
 ## Features
 
-- **ChatKit endpoint** at `POST /chatkit` that streams responses using the ChatKit protocol when the optional ChatKit Python package is installed.
-- **Medication management tool** that records and tracks user medications with confirmation widgets.
-- **Health coaching system prompt** extracted into `app/constants.py` for easy customization.
-- **Medication store** backed by in-memory storage in `app/medications.py`.
-- **REST helpers**
-  - `GET  /medications` – list saved medications (used by the frontend medication cabinet)
-  - `POST /medications/{medication_id}/save` – mark a medication as saved
-  - `POST /medications/{medication_id}/discard` – discard a pending medication
-  - `GET  /health` – surface a basic health indicator
+- **ChatKit endpoint** at `POST /chatkit` that streams multi-agent responses for the UI shell.
+- **In-memory medication store** in `app/medications.py` shared by the pharmacist agent and REST API.
+- **REST endpoints** for the frontend medication cabinet and health check:
+  - `GET /medications` – list saved medications
+  - `DELETE /medications/{medication_name}` – remove a single medication
+  - `DELETE /medications` – clear the cabinet
+  - `GET /health` – basic service ping
 
-## Getting started
+## Quick start
 
-To enable the realtime assistant you need to install both the ChatKit Python package and the OpenAI SDK, then provide an `OPENAI_API_KEY` environment variable.
-
-```bash
-uv sync
-export OPENAI_API_KEY=sk-proj-...
-uv run uvicorn app.main:app --reload
-```
+See [README.md](../README.md) at the top directory for instructions on how to run both the backend and frontend together.
