@@ -6,7 +6,7 @@ from typing import Any, AsyncIterator
 
 from chatkit.widgets import Card, Markdown
 
-from .config import agent_background, SUPERVISOR_AGENT_NAME
+from .config import agent_background
 
 
 def _extract_agent_name(ev: Any) -> str | None:
@@ -38,17 +38,17 @@ def _extract_text_delta(ev: Any) -> str:
 
 
 def _make_card(agent_name: str, text: str) -> Card:
+    title_md = Markdown(id="agent-title", value=f"**{agent_name}**")
     md = Markdown(id="agent-response", value=text, streaming=True)
     return Card(
         size="md",
         background=agent_background(agent_name),
-        children=[md],
+        children=[title_md, md],
     )
 
 
 async def generate_agent_response_widget(
-    result_stream: Any,
-    default_agent_name: str = SUPERVISOR_AGENT_NAME,
+    result_stream: Any
 ) -> AsyncIterator[Card]:
     """Yield streaming `Card` widgets reflecting agent handoffs and text deltas.
 
@@ -57,7 +57,7 @@ async def generate_agent_response_widget(
     result_stream: The streaming result from the Agents SDK (supports `.stream_events()`).
     default_agent_name: Fallback agent name to use before first handoff event.
     """
-    current_agent_name = default_agent_name
+    current_agent_name = ""
     text_acc = ""
 
     # Initial empty card so the widget renders immediately

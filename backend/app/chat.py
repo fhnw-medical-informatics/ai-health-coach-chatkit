@@ -24,7 +24,6 @@ from chatkit.types import (
  
 from openai.types.responses import ResponseInputContentParam
 
-from .config import SUPERVISOR_AGENT_NAME
 from .supervisor import create_supervisor_agent
 from .pharmacist import create_pharmacist_agent
 from .psychologist import create_psychologist_agent
@@ -81,10 +80,7 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         # Stream the widget updates to ChatKit UI
         async for ev in stream_widget(
             thread,
-            generate_agent_response_widget(
-                result,
-                getattr(self.assistant, "name", SUPERVISOR_AGENT_NAME),
-            ),
+            generate_agent_response_widget(result),
             generate_id=lambda item_type: self.store.generate_item_id(item_type, thread, context),
         ):
             yield ev
