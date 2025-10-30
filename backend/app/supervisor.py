@@ -8,14 +8,14 @@ from typing import Final
 from agents import Agent, RunContextWrapper, function_tool, handoff
 from chatkit.agents import AgentContext, ClientToolCall
 
-from .model import MODEL
+from .config import MODEL, SUPERVISOR_AGENT_NAME
 
 # NOTE: Must match frontend tool name
 CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
 SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
 
 
-SUPERVISOR_AGENT_NAME: Final[str] = "Supervisor"
+# Use centralized name from config
 
 
 SUPERVISOR_INSTRUCTIONS = """You are a supervisor that routes user queries to appropriate specialists.

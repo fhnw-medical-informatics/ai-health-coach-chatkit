@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 import logging
 from typing import Any, AsyncIterator
@@ -22,26 +21,22 @@ from chatkit.types import (
     ThreadStreamEvent,
     UserMessageItem,
 )
-from chatkit.widgets import Card, Markdown
+ 
 from openai.types.responses import ResponseInputContentParam
 
-from .pharmacist import PHARMACIST_AGENT_NAME, create_pharmacist_agent
-from .psychologist import PSYCHOLOGIST_AGENT_NAME, create_psychologist_agent
-from .supervisor import SUPERVISOR_AGENT_NAME, create_supervisor_agent
+from .config import SUPERVISOR_AGENT_NAME
+from .supervisor import create_supervisor_agent
+from .pharmacist import create_pharmacist_agent
+from .psychologist import create_psychologist_agent
+from .widgets import generate_agent_response_widget
 from .memory_store import MemoryStore
+
 
 logging.basicConfig(level=logging.INFO)
 
 
-AGENT_BACKGROUNDS: dict[str, dict[str, str]] = {
-    PSYCHOLOGIST_AGENT_NAME: {"light": "#e6f0ff", "dark": "#1e3a8a"},
-    PHARMACIST_AGENT_NAME: {"light": "#e8f8f0", "dark": "#166534"},
-    SUPERVISOR_AGENT_NAME: {"light": "#f3f4f6", "dark": "#374151"},
-}
-
-
 class HealthCoachServer(ChatKitServer[dict[str, Any]]):
-    """Health Coach server with multi-agent setup for specialized health support."""
+    """Serves the multi-agent system via ChatKit."""
 
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
@@ -83,70 +78,13 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
             context=agent_context,
         )
 
-        # Output agent response as a widget so we can style it (and update live)
-        async def widget_generator():
-            def extract_agent_name(ev: Any) -> str | None:
-                if hasattr(ev, "new_agent") and getattr(ev.new_agent, "name", None):
-                    return ev.new_agent.name
-
-                run_item = getattr(ev, "run_item", None)
-                if run_item and getattr(run_item, "agent", None):
-                    agent_obj_or_name = run_item.agent
-                    return getattr(agent_obj_or_name, "name", None) or str(agent_obj_or_name)
-
-                return None
-
-            def extract_text_delta(ev: Any) -> str:
-                data = getattr(ev, "data", None)
-                if data is None:
-                    return ""
-
-                data_type = getattr(data, "type", "")
-                if data_type not in (
-                    "response.output_text.delta",
-                    "output_text.delta",
-                    "output_text_delta",
-                ):
-                    return ""
-
-                return getattr(data, "delta", "") or getattr(data, "text", "") or ""
-
-            def make_card(agent_name: str, text: str) -> Card:
-                md = Markdown(id="agent-response", value=text, streaming=True)
-                return Card(
-                    size="md",
-                    background=agent_background(agent_name),
-                    children=[md],
-                )
-
-            # Start with whoever is currently "active" (likely Supervisor)
-            current_agent_name = getattr(self.assistant, "name", SUPERVISOR_AGENT_NAME)
-            text_acc = ""
-
-            # Yield initial empty card so the shell renders immediately
-            yield make_card(current_agent_name, text_acc)
-
-            # Iterate the *Agents SDK* events directly so we can:
-            #  - detect handoffs to sub-agents and recolor the card
-            #  - append token deltas to the Markdown
-            async for ev in result.stream_events():
-                new_name = extract_agent_name(ev)
-                if new_name:
-                    current_agent_name = new_name
-                    yield make_card(current_agent_name, text_acc)
-                    continue
-
-                delta = extract_text_delta(ev)
-                if not delta:
-                    continue
-
-                text_acc += delta
-                yield make_card(current_agent_name, text_acc)
-
         # Stream the widget updates to ChatKit UI
         async for ev in stream_widget(
             thread,
-            widget_generator(),
+            generate_agent_response_widget(
+                result,
+                getattr(self.assistant, "name", SUPERVISOR_AGENT_NAME),
+            ),
             generate_id=lambda item_type: self.store.generate_item_id(item_type, thread, context),
         ):
             yield ev
@@ -242,9 +180,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
 
 def create_chatkit_server() -> HealthCoachServer | None:
     return HealthCoachServer()
-
-def agent_background(agent_name: str) -> dict[str, str]:
-    return AGENT_BACKGROUNDS.get(agent_name, {"light": "#f3f4f6", "dark": "#374151"})
 
 
 def _is_tool_completion_item(item: Any) -> bool:

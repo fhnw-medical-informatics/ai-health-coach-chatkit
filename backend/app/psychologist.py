@@ -7,9 +7,9 @@ from typing import Final
 from agents import Agent
 from chatkit.agents import AgentContext
 
-from .model import MODEL
+from .config import MODEL, PSYCHOLOGIST_AGENT_NAME
 
-PSYCHOLOGIST_AGENT_NAME: Final[str] = "Psychologist"
+# Use centralized name from config
 
 
 PSYCHOLOGIST_INSTRUCTIONS = """You are a psychologist who specializes in supporting patients with mental health struggles.

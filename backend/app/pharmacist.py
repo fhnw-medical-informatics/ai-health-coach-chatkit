@@ -8,10 +8,10 @@ from typing import Any, Final
 from agents import Agent, RunContextWrapper, function_tool
 from chatkit.agents import AgentContext
 
-from .model import MODEL
+from .config import MODEL, PHARMACIST_AGENT_NAME
 from .medications import medication_store
 
-PHARMACIST_AGENT_NAME: Final[str] = "Pharmacist"
+# Use centralized name from config
 
 
 PHARMACIST_INSTRUCTIONS = """You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents).
