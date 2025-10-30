@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Final
 
 from agents import Agent, RunContextWrapper, function_tool
 from chatkit.agents import AgentContext
 
 from .model import MODEL
 from .medications import medication_store
+
+PHARMACIST_AGENT_NAME: Final[str] = "Pharmacist"
+
 
 PHARMACIST_INSTRUCTIONS = """You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents).
 If users report symptoms treatable with current medications, suggest the appropriate medication and dosage.
@@ -100,7 +103,7 @@ async def remove_medication(
 def create_pharmacist_agent() -> Agent[AgentContext]:
     """Create the pharmacist agent specialized in medication management."""
     return Agent(
-        name="Pharmacist",
+        name=PHARMACIST_AGENT_NAME,
         model=MODEL,
         instructions=PHARMACIST_INSTRUCTIONS,
         tools=[list_medications, add_medication, get_medication, remove_medication],

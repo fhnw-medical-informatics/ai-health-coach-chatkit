@@ -15,6 +15,9 @@ CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
 SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
 
 
+SUPERVISOR_AGENT_NAME: Final[str] = "Supervisor"
+
+
 SUPERVISOR_INSTRUCTIONS = """You are a supervisor that routes user queries to appropriate specialists.
 Do not ask questions, never answer yourself, and only focus on triage.
 You can also handle basic UI requests using your tools."""
@@ -60,7 +63,7 @@ def create_supervisor_agent(agents: list[Agent[AgentContext]]) -> Agent[AgentCon
     handoffs = [handoff(agent) for agent in agents]
     
     return Agent(
-        name="Supervisor",
+        name=SUPERVISOR_AGENT_NAME,
         model=MODEL,
         instructions=SUPERVISOR_INSTRUCTIONS,
         tools=[switch_theme],

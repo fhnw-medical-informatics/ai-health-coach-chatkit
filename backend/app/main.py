@@ -1,4 +1,4 @@
-"""Exposes the ChatKit server and medication management endpoints as REST APIs."""
+"""Exposes a ChatKit server as well as a REST API for medication management."""
 
 from __future__ import annotations
 

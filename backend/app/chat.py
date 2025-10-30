@@ -25,26 +25,19 @@ from chatkit.types import (
 from chatkit.widgets import Card, Markdown
 from openai.types.responses import ResponseInputContentParam
 
-from .pharmacist import create_pharmacist_agent
-from .psychologist import create_psychologist_agent
-from .supervisor import create_supervisor_agent
+from .pharmacist import PHARMACIST_AGENT_NAME, create_pharmacist_agent
+from .psychologist import PSYCHOLOGIST_AGENT_NAME, create_psychologist_agent
+from .supervisor import SUPERVISOR_AGENT_NAME, create_supervisor_agent
 from .memory_store import MemoryStore
 
-# Set to DEBUG for detailed logging
 logging.basicConfig(level=logging.INFO)
 
 
-def _is_tool_completion_item(item: Any) -> bool:
-    return isinstance(item, ClientToolCallItem)
-
-
-def _user_message_text(item: UserMessageItem) -> str:
-    parts: list[str] = []
-    for part in item.content:
-        text = getattr(part, "text", None)
-        if text:
-            parts.append(text)
-    return " ".join(parts).strip()
+AGENT_BACKGROUNDS: dict[str, dict[str, str]] = {
+    PSYCHOLOGIST_AGENT_NAME: {"light": "#e6f0ff", "dark": "#1e3a8a"},
+    PHARMACIST_AGENT_NAME: {"light": "#e8f8f0", "dark": "#166534"},
+    SUPERVISOR_AGENT_NAME: {"light": "#f3f4f6", "dark": "#374151"},
+}
 
 
 class HealthCoachServer(ChatKitServer[dict[str, Any]]):
@@ -83,15 +76,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         if agent_input is None:
             return
 
-        # --- color palette per agent name (light/dark pairs supported by ChatKit) ---
-        AGENT_BG = {
-            "Psychologist": {"light": "#e6f0ff", "dark": "#1e3a8a"},  # brighter blue
-            "Pharmacist":   {"light": "#e8f8f0", "dark": "#166534"},  # brighter green
-            "Supervisor":   {"light": "#f3f4f6", "dark": "#374151"},  # lighter neutral
-        }
-        def bg_for(name: str):
-            return AGENT_BG.get(name, {"light": "#f3f4f6", "dark": "#374151"})
-
         # Run the multi-agent supervisor in streaming mode (Agents SDK stream)
         result = Runner.run_streamed(
             self.assistant,
@@ -101,46 +85,63 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
 
         # Output agent response as a widget so we can style it (and update live)
         async def widget_generator():
+            def extract_agent_name(ev: Any) -> str | None:
+                if hasattr(ev, "new_agent") and getattr(ev.new_agent, "name", None):
+                    return ev.new_agent.name
+
+                run_item = getattr(ev, "run_item", None)
+                if run_item and getattr(run_item, "agent", None):
+                    agent_obj_or_name = run_item.agent
+                    return getattr(agent_obj_or_name, "name", None) or str(agent_obj_or_name)
+
+                return None
+
+            def extract_text_delta(ev: Any) -> str:
+                data = getattr(ev, "data", None)
+                if data is None:
+                    return ""
+
+                data_type = getattr(data, "type", "")
+                if data_type not in (
+                    "response.output_text.delta",
+                    "output_text.delta",
+                    "output_text_delta",
+                ):
+                    return ""
+
+                return getattr(data, "delta", "") or getattr(data, "text", "") or ""
+
+            def make_card(agent_name: str, text: str) -> Card:
+                md = Markdown(id="agent-response", value=text, streaming=True)
+                return Card(
+                    size="md",
+                    background=agent_background(agent_name),
+                    children=[md],
+                )
+
             # Start with whoever is currently "active" (likely Supervisor)
-            current_agent_name = getattr(self.assistant, "name", "Supervisor")
+            current_agent_name = getattr(self.assistant, "name", SUPERVISOR_AGENT_NAME)
             text_acc = ""
 
-            # Stable id is required for incremental Markdown updates
-            md = Markdown(id="agent-response", value="", streaming=True)
-            card = Card(size="md", background=bg_for(current_agent_name), children=[md])
-
             # Yield initial empty card so the shell renders immediately
-            yield card
+            yield make_card(current_agent_name, text_acc)
 
             # Iterate the *Agents SDK* events directly so we can:
             #  - detect handoffs to sub-agents and recolor the card
             #  - append token deltas to the Markdown
             async for ev in result.stream_events():
-                # ---- Detect agent handoff / active-agent updates ----
-                # We duck-type across SDK variants:
-                new_name = None
-                if hasattr(ev, "new_agent") and getattr(ev.new_agent, "name", None):
-                    new_name = ev.new_agent.name
-                elif hasattr(ev, "run_item") and getattr(ev.run_item, "agent", None):
-                    agent_obj_or_name = ev.run_item.agent
-                    new_name = getattr(agent_obj_or_name, "name", None) or str(agent_obj_or_name)
-
+                new_name = extract_agent_name(ev)
                 if new_name:
                     current_agent_name = new_name
-                    card = Card(size="md", background=bg_for(current_agent_name), children=[md])
-                    yield card
+                    yield make_card(current_agent_name, text_acc)
                     continue
 
-                # ---- Append text deltas from the Responses API passthrough ----
-                data = getattr(ev, "data", None)
-                data_type = getattr(data, "type", "") if data else ""
-                if data_type in ("response.output_text.delta", "output_text.delta", "output_text_delta"):
-                    delta = getattr(data, "delta", "") or getattr(data, "text", "")
-                    if delta:
-                        text_acc += delta
-                        md = Markdown(id="agent-response", value=text_acc, streaming=True)
-                        card = Card(size="md", background=bg_for(current_agent_name), children=[md])
-                        yield card
+                delta = extract_text_delta(ev)
+                if not delta:
+                    continue
+
+                text_acc += delta
+                yield make_card(current_agent_name, text_acc)
 
         # Stream the widget updates to ChatKit UI
         async for ev in stream_widget(
@@ -150,27 +151,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         ):
             yield ev
         return
-
-    async def to_message_content(self, _input: Attachment) -> ResponseInputContentParam:
-        raise RuntimeError("File attachments are not supported in this demo.")
-
-    def _init_thread_item_converter(self) -> Any | None:
-        converter_cls = ThreadItemConverter
-        if converter_cls is None or not callable(converter_cls):
-            return None
-
-        attempts: tuple[dict[str, Any], ...] = (
-            {"to_message_content": self.to_message_content},
-            {"message_content_converter": self.to_message_content},
-            {},
-        )
-
-        for kwargs in attempts:
-            try:
-                return converter_cls(**kwargs)
-            except TypeError:
-                continue
-        return None
 
     async def _latest_thread_item(
         self, thread: ThreadMetadata, context: dict[str, Any]
@@ -238,6 +218,43 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
 
         return None
 
+    def _init_thread_item_converter(self) -> Any | None:
+        converter_cls = ThreadItemConverter
+        if converter_cls is None or not callable(converter_cls):
+            return None
+
+        attempts: tuple[dict[str, Any], ...] = (
+            {"to_message_content": self.to_message_content},
+            {"message_content_converter": self.to_message_content},
+            {},
+        )
+
+        for kwargs in attempts:
+            try:
+                return converter_cls(**kwargs)
+            except TypeError:
+                continue
+        return None
+
+    async def to_message_content(self, _input: Attachment) -> ResponseInputContentParam:
+        raise RuntimeError("File attachments are not supported in this demo.")
+
 
 def create_chatkit_server() -> HealthCoachServer | None:
     return HealthCoachServer()
+
+def agent_background(agent_name: str) -> dict[str, str]:
+    return AGENT_BACKGROUNDS.get(agent_name, {"light": "#f3f4f6", "dark": "#374151"})
+
+
+def _is_tool_completion_item(item: Any) -> bool:
+    return isinstance(item, ClientToolCallItem)
+
+
+def _user_message_text(item: UserMessageItem) -> str:
+    parts: list[str] = []
+    for part in item.content:
+        text = getattr(part, "text", None)
+        if text:
+            parts.append(text)
+    return " ".join(parts).strip()
