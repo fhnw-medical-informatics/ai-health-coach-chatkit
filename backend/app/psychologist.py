@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Final
-
 from agents import Agent
 from chatkit.agents import AgentContext
 
-from .config import MODEL, PSYCHOLOGIST_AGENT_NAME
+from .config import MODEL, PSYCHOLOGIST_AGENT_NAME, agent_name_prefix_instruction
 
-# Use centralized name from config
-
-
-PSYCHOLOGIST_INSTRUCTIONS = """You are a psychologist who specializes in supporting patients with mental health struggles.
+PSYCHOLOGIST_INSTRUCTIONS = f"""You are a psychologist who specializes in supporting patients with mental health struggles.
 Please be empathetic and supportive.
-For serious mental health crises, encourage immediate professional help."""
+For serious mental health crises, encourage immediate professional help.
+
+{agent_name_prefix_instruction(PSYCHOLOGIST_AGENT_NAME)}"""
 
 
 def create_psychologist_agent() -> Agent[AgentContext]:

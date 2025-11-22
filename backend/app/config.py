@@ -12,3 +12,8 @@ PHARMACIST_AGENT_NAME = "Pharmacist"
 PSYCHOLOGIST_AGENT_NAME = "Psychologist"
 
 
+def agent_name_prefix_instruction(agent_name: str) -> str:
+    """Generate the generic instruction for agents to prefix their responses with their name in bold."""
+    return f'IMPORTANT: Always start your response with **{agent_name}**: <your response> as the very first thing you output (asterisks as markdown bold are important).'
+
+

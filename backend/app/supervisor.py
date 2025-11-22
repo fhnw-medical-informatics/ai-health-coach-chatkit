@@ -8,19 +8,18 @@ from typing import Final
 from agents import Agent, RunContextWrapper, function_tool, handoff
 from chatkit.agents import AgentContext, ClientToolCall
 
-from .config import MODEL, SUPERVISOR_AGENT_NAME
+from .config import MODEL, SUPERVISOR_AGENT_NAME, agent_name_prefix_instruction
 
 # NOTE: Must match frontend tool name
 CLIENT_THEME_TOOL_NAME: Final[str] = "switch_theme"
 SUPPORTED_COLOR_SCHEMES: Final[frozenset[str]] = frozenset({"light", "dark"})
 
 
-# Use centralized name from config
-
-
-SUPERVISOR_INSTRUCTIONS = """You are a supervisor that routes user queries to appropriate specialists.
+SUPERVISOR_INSTRUCTIONS = f"""You are a supervisor that routes user queries to appropriate specialists.
 Do not ask questions, never answer yourself, and only focus on triage.
-You can also handle basic UI requests using your tools."""
+You can also handle basic UI requests using your tools.
+
+{agent_name_prefix_instruction(SUPERVISOR_AGENT_NAME)}"""
 
 
 def _normalize_color_scheme(value: str) -> str:
@@ -56,11 +55,10 @@ async def switch_theme(
         return None
 
 
-def create_supervisor_agent(agents: list[Agent[AgentContext]]) -> Agent[AgentContext]:
+def create_supervisor_agent(handoffDelegateAgents: list[Agent[AgentContext]]) -> Agent[AgentContext]:
     """Create a generic supervisor agent that routes queries to provided agents."""
-    
     # Create handoffs - the agent name will be included in the tool call by default
-    handoffs = [handoff(agent) for agent in agents]
+    handoffs = [handoff(agent) for agent in handoffDelegateAgents]
     
     return Agent(
         name=SUPERVISOR_AGENT_NAME,

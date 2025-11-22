@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Final
+from typing import Any
 
 from agents import Agent, RunContextWrapper, function_tool
 from chatkit.agents import AgentContext
 
-from .config import MODEL, PHARMACIST_AGENT_NAME
+from .config import MODEL, PHARMACIST_AGENT_NAME, agent_name_prefix_instruction
 from .medications import medication_store
 
-# Use centralized name from config
 
-
-PHARMACIST_INSTRUCTIONS = """You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents).
+PHARMACIST_INSTRUCTIONS = f"""You are a pharmacist who manages a medicine cabinet (use your tools to inspect and manage the contents).
 If users report symptoms treatable with current medications, suggest the appropriate medication and dosage.
-Be very careful with advice and suggest consulting a healthcare provider for serious medical concerns."""
+Be very careful with advice and suggest consulting a healthcare provider for serious medical concerns.
+
+{agent_name_prefix_instruction(PHARMACIST_AGENT_NAME)}"""
 
 
 @function_tool(description_override="List all medications in the patient's medicine cabinet. Use this to see what medications the patient currently has.")
