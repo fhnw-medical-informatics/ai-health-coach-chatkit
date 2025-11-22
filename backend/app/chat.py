@@ -10,8 +10,8 @@ from agents import Runner
 from chatkit.agents import (
     AgentContext,
     ThreadItemConverter,
+    stream_agent_response,
 )
-from chatkit.server import stream_widget
 from chatkit.server import ChatKitServer
 from chatkit.types import (
     Attachment,
@@ -21,26 +21,36 @@ from chatkit.types import (
     ThreadStreamEvent,
     UserMessageItem,
 )
- 
 from openai.types.responses import ResponseInputContentParam
 
-from .supervisor import create_supervisor_agent
 from .pharmacist import create_pharmacist_agent
 from .psychologist import create_psychologist_agent
-from .widgets import generate_agent_response_widget
+from .supervisor import create_supervisor_agent
 from .memory_store import MemoryStore
-
 
 logging.basicConfig(level=logging.INFO)
 
 
+def _is_tool_completion_item(item: Any) -> bool:
+    return isinstance(item, ClientToolCallItem)
+
+
+def _user_message_text(item: UserMessageItem) -> str:
+    parts: list[str] = []
+    for part in item.content:
+        text = getattr(part, "text", None)
+        if text:
+            parts.append(text)
+    return " ".join(parts).strip()
+
+
 class HealthCoachServer(ChatKitServer[dict[str, Any]]):
-    """Serves the multi-agent system via ChatKit."""
+    """Health Coach server with multi-agent setup for specialized health support."""
 
     def __init__(self) -> None:
         self.store: MemoryStore = MemoryStore()
         super().__init__(self.store)
-
+        
         # Create multi-agent setup
         pharmacist = create_pharmacist_agent()
         psychologist = create_psychologist_agent()
@@ -70,21 +80,36 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
         if agent_input is None:
             return
 
-        # Run the multi-agent supervisor in streaming mode (Agents SDK stream)
         result = Runner.run_streamed(
             self.assistant,
             agent_input,
             context=agent_context,
         )
 
-        # Stream the widget updates to ChatKit UI
-        async for ev in stream_widget(
-            thread,
-            generate_agent_response_widget(result),
-            generate_id=lambda item_type: self.store.generate_item_id(item_type, thread, context),
-        ):
-            yield ev
+        async for event in stream_agent_response(agent_context, result):
+            yield event
         return
+
+    async def to_message_content(self, _input: Attachment) -> ResponseInputContentParam:
+        raise RuntimeError("File attachments are not supported in this demo.")
+
+    def _init_thread_item_converter(self) -> Any | None:
+        converter_cls = ThreadItemConverter
+        if converter_cls is None or not callable(converter_cls):
+            return None
+
+        attempts: tuple[dict[str, Any], ...] = (
+            {"to_message_content": self.to_message_content},
+            {"message_content_converter": self.to_message_content},
+            {},
+        )
+
+        for kwargs in attempts:
+            try:
+                return converter_cls(**kwargs)
+            except TypeError:
+                continue
+        return None
 
     async def _latest_thread_item(
         self, thread: ThreadMetadata, context: dict[str, Any]
@@ -152,40 +177,6 @@ class HealthCoachServer(ChatKitServer[dict[str, Any]]):
 
         return None
 
-    def _init_thread_item_converter(self) -> Any | None:
-        converter_cls = ThreadItemConverter
-        if converter_cls is None or not callable(converter_cls):
-            return None
-
-        attempts: tuple[dict[str, Any], ...] = (
-            {"to_message_content": self.to_message_content},
-            {"message_content_converter": self.to_message_content},
-            {},
-        )
-
-        for kwargs in attempts:
-            try:
-                return converter_cls(**kwargs)
-            except TypeError:
-                continue
-        return None
-
-    async def to_message_content(self, _input: Attachment) -> ResponseInputContentParam:
-        raise RuntimeError("File attachments are not supported in this demo.")
-
 
 def create_chatkit_server() -> HealthCoachServer | None:
     return HealthCoachServer()
-
-
-def _is_tool_completion_item(item: Any) -> bool:
-    return isinstance(item, ClientToolCallItem)
-
-
-def _user_message_text(item: UserMessageItem) -> str:
-    parts: list[str] = []
-    for part in item.content:
-        text = getattr(part, "text", None)
-        if text:
-            parts.append(text)
-    return " ".join(parts).strip()

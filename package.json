@@ -2,7 +2,7 @@
   "name": "openai-chatkit-sample-apps",
   "private": true,
   "scripts": {
-    "install:all": "uv sync --directory backend && npm --prefix frontend ci",
+    "install:all": "uv sync --directory backend && npm --prefix frontend install",
     "postinstall": "npm run install:all",
     "start": "concurrently --kill-others-on-fail --names backend,frontend \"npm run backend\" \"npm run frontend\"",
     "frontend": "npm --prefix frontend run dev",
